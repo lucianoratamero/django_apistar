@@ -104,19 +104,16 @@ class TestDjangoBasicAuthentication(TestCase):
 class TestRequestMiddleware(TestCase):
 
     def setUp(self):
-        self.patcher = patch('django_apistar.middleware.DjangoAPIStarConfig.run_app')
-        self.mock_run_app = self.patcher.start()
+        self.patcher = patch('django_apistar.middleware.App')
+        self.mocked_app = self.patcher.start()
         self.middleware = middleware.RequestMiddleware
 
     def tearDown(self):
         self.patcher.stop()
 
-    def test_initializes_app_headers_and_status_text(self):
-        assert not self.mock_run_app.called
-
+    def test_initializes_with_headers_and_status_text(self):
         instance = self.middleware()
 
-        self.mock_run_app.assert_called_once_with()
         self.assertEqual([], instance.response_headers)
         self.assertEqual('', instance.status_text)
 
@@ -129,7 +126,7 @@ class TestRequestMiddleware(TestCase):
         self.assertEqual(response, instance.process_response(request, response))
 
     def test_ignores_apistar_if_it_returns_404(self):
-        self.mock_run_app().return_value = [b'']
+        self.mocked_app().return_value = [b'']
         request = FakeRequest()
         response = HttpResponseNotFound()
 
@@ -148,6 +145,6 @@ class TestRequestMiddleware(TestCase):
 
         apistar_response = instance.process_response(request, response)
 
-        self.mock_run_app().assert_called_with(request.environ, instance.process_apistar_response)
+        self.mocked_app.assert_called_with(request.environ, instance.process_apistar_response)
         self.assertEqual(200, apistar_response.status_code)
         self.assertEqual(instance.response_headers[0], apistar_response._headers['content-type'])

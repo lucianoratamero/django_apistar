@@ -2,14 +2,13 @@
 from django.http.response import HttpResponseNotFound
 from django.utils.deprecation import MiddlewareMixin
 
-from django_apistar.apps import DjangoAPIStarConfig
+from django_apistar.apps import App
 
 
 class RequestMiddleware(MiddlewareMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.app = DjangoAPIStarConfig.run_app()
         self.response_headers = []
         self.status_text = ''
 
@@ -24,7 +23,7 @@ class RequestMiddleware(MiddlewareMixin):
         if path != '/' and not isinstance(response, HttpResponseNotFound):
             return response
 
-        content = self.app(request.environ, self.process_apistar_response)
+        content = App(request.environ, self.process_apistar_response)
 
         if not self.status_code == 404:
             response.content = content

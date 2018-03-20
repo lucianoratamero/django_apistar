@@ -40,3 +40,6 @@ class DjangoAPIStarConfig(AppConfig):
 class DjangoAPIStarApp(WSGIApp):
     """Main Django API Star app. Overwrites WSGI command to hijack Django's WSGI app."""
     BUILTIN_COMMANDS = [Command('run', lambda: None)]
+
+
+App = DjangoAPIStarConfig.run_app()
