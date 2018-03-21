@@ -1,0 +1,4 @@
+# Include the license file
+include LICENSE
+recursive-include django_apistar/static *
+recursive-include django_apistar/templates *
