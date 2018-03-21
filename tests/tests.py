@@ -14,9 +14,6 @@ from django.http.response import HttpResponse, HttpResponseNotFound
 from django_apistar import apps, auth, middleware
 
 
-routes = []  # used to simulate a route conf module
-
-
 class FakeRequest:
     def __init__(self, path='/fake/'):
         self.environ = {'PATH_INFO': path}
@@ -32,7 +29,6 @@ class TestDjangoAPIStarApps(TestCase):
         self.assertRaises(ImproperlyConfigured, apps.DjangoAPIStarConfig.run_app)
 
     @patch('django_apistar.apps.Include')
-    @override_settings(APISTAR_ROUTE_CONF='django_apistar.tests')
     def test_app_adds_static_and_docs_urls_if_debug(self, mocked_include):
         app = apps.DjangoAPIStarConfig.run_app()
         self.assertEqual(0, len(app.router._routes))
