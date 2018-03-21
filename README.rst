@@ -12,6 +12,7 @@ work with.
 Both API Star’s docs and Django Admin work as intended.
 
 Suppports:
+
 - django>=1.8
 - apistar>=0.3.5
 
