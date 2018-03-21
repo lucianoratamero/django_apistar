@@ -1,6 +1,9 @@
 django_apistar
 ==============
 
+.. image:: https://travis-ci.org/lucianoratamero/django_apistar.svg?branch=master
+    :target: https://travis-ci.org/lucianoratamero/django_apistar
+
 This project is a `Django`_ App that hooks up Django with the `API
 Star`_\ ’s routes and views. The aim is to have API Star as the API
 frontend, while having the whole Django toolset available for devs to
