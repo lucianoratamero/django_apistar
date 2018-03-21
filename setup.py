@@ -9,7 +9,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='django_apistar',
-    version='0.2.1',
+    version='0.2.3',
     description='Django app for using API Star as frontend.',
     long_description=long_description,
     long_description_content_type='text/x-rst',
@@ -25,6 +25,8 @@ setup(
         'Intended Audience :: Developers',
         'Programming Language :: Python :: 3.6',
     ],
+
+    include_package_data=True,
     keywords='apistar api rest django',
     packages=find_packages(exclude=['tests']),
     install_requires=['django>=1.8', 'apistar>=0.3.5'],
