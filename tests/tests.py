@@ -9,10 +9,12 @@ from apistar.handlers import docs_urls, static_urls
 from django.test import TestCase
 from django.test.utils import override_settings
 from django.core.exceptions import ImproperlyConfigured
+from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.http.response import HttpResponse, HttpResponseNotFound
 
 from django_apistar import apps, auth, test, wsgi
+from django_apistar.management.commands.run import Command
 
 
 class FakeRequest:
@@ -89,3 +91,14 @@ class TestTestCase(TestCase):
         test_case = test.TestCase()
         self.assertEqual(test.TestClient, test_case.client_class)
         self.assertEqual(mocked_app.apistar_wsgi_app.reverse_url, test_case.reverse_url)
+
+
+class TestRunCommand(TestCase):
+
+    @patch('django_apistar.management.commands.run.application')
+    @patch('django_apistar.management.commands.run.run_wsgi')
+    def test_command_runs_correct_application(self, mocked_run_wsgi, mocked_app):
+        assert issubclass(Command, BaseCommand)
+        command = Command()
+        command.handle()
+        mocked_run_wsgi.assert_called_once_with(mocked_app)
