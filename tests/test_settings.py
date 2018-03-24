@@ -23,6 +23,4 @@ INSTALLED_APPS = (
 
 APISTAR_SETTINGS = {'DATABASES': DATABASES}
 APISTAR_ROUTE_CONF = 'tests'
-
-MIDDLEWARE = ['django_apistar.middleware.RequestMiddleware']  # for django 2+
-MIDDLEWARE_CLASSES = ['django_apistar.middleware.RequestMiddleware']
+DEBUG = False
