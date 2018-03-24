@@ -2,53 +2,23 @@
 from unittest.mock import patch, call
 
 from apistar import http
+from apistar.test import _TestClient
 from apistar.interfaces import Auth
-from apistar.frameworks.wsgi import WSGIApp
 from apistar.handlers import docs_urls, static_urls
 from django.test import TestCase
 from django.test.utils import override_settings
-from django.core.exceptions import ImproperlyConfigured
+from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from django.http.response import HttpResponse, HttpResponseNotFound
 
-from django_apistar import apps, auth, middleware
+import tests
+from tests import test_settings
+from django_apistar import auth, test, wsgi
+from django_apistar.management.commands.run import Command
 
 
 class FakeRequest:
     def __init__(self, path='/fake/'):
         self.environ = {'PATH_INFO': path}
-
-
-class TestDjangoAPIStarApps(TestCase):
-
-    def test_app_has_correct_name(self):
-        self.assertEqual('django_apistar', apps.DjangoAPIStarConfig.name)
-
-    @override_settings(APISTAR_ROUTE_CONF='')
-    def test_run_app_without_route_conf(self):
-        self.assertRaises(ImproperlyConfigured, apps.DjangoAPIStarConfig.run_app)
-
-    @patch('django_apistar.apps.Include')
-    def test_app_adds_static_and_docs_urls_if_debug(self, mocked_include):
-        app = apps.DjangoAPIStarConfig.run_app()
-        self.assertEqual(0, len(app.router._routes))
-        self.assertEqual(0, mocked_include.call_count)
-
-        with override_settings(DEBUG=True):
-            app = apps.DjangoAPIStarConfig.run_app()
-            self.assertEqual(2, len(app.router._routes))
-            self.assertEqual(2, mocked_include.call_count)
-            self.assertIn(call('/static/', static_urls), mocked_include.call_args_list)
-            self.assertIn(call('/docs/', docs_urls), mocked_include.call_args_list)
-
-    def test_app_is_wsgiapp_subclass(self):
-        assert issubclass(apps.DjangoAPIStarApp, WSGIApp)
-
-    def test_app_has_run_command_bound_to_none(self):
-        commands = apps.DjangoAPIStarApp.BUILTIN_COMMANDS
-        self.assertEqual(1, len(commands))
-        self.assertEqual('run', commands[0].name)
-        self.assertEqual(None, commands[0].handler())
 
 
 class TestDjangoAuth(TestCase):
@@ -97,50 +67,91 @@ class TestDjangoBasicAuthentication(TestCase):
         mocked_authenticate.assert_called_once_with(username='username', password='password')
 
 
-class TestRequestMiddleware(TestCase):
+class TestTestClient(TestCase):
+
+    def test_test_client_inherits_from_correct_class(self):
+        assert issubclass(test.TestClient, _TestClient)
+
+    @patch('django_apistar.test._TestClient.__init__')
+    @patch('django_apistar.test.application')
+    def test_test_client_uses_application_at_init(self, mocked_app, mocked_init):
+        mocked_init.return_value = None
+        test.TestClient()
+        mocked_init.assert_called_once_with(mocked_app, 'http', 'testserver')
+
+
+class TestTestCase(TestCase):
+
+    def test_test_case_inherits_from_django_test_case(self):
+        assert issubclass(test.TestCase, TestCase)
+
+    @patch('django_apistar.test.application')
+    def test_test_case_initializes_with_correct_attrs(self, mocked_app):
+        test_case = test.TestCase()
+        self.assertEqual(test.TestClient, test_case.client_class)
+        self.assertEqual(mocked_app.apistar_wsgi_app.reverse_url, test_case.reverse_url)
+
+
+class TestRunCommand(TestCase):
+
+    @patch('django_apistar.management.commands.run.application')
+    @patch('django_apistar.management.commands.run.run_wsgi')
+    def test_command_runs_correct_application(self, mocked_run_wsgi, mocked_app):
+        assert issubclass(Command, BaseCommand)
+        command = Command()
+        command.handle()
+        mocked_run_wsgi.assert_called_once_with(mocked_app)
+
+
+class TestWSGIApp(TestCase):
 
     def setUp(self):
-        self.patcher = patch('django_apistar.middleware.App')
-        self.mocked_app = self.patcher.start()
-        self.middleware = middleware.RequestMiddleware
+        tests.routes = []
 
-    def tearDown(self):
-        self.patcher.stop()
+    @patch('django_apistar.wsgi.Include')
+    def test_initializes_static_and_docs_if_debug_true(self, mocked_include):
+        app = wsgi.DjangoAPIStarWSGIApplication()
+        self.assertEqual(0, len(app.apistar_wsgi_app.router._routes))
+        self.assertEqual(0, mocked_include.call_count)
 
-    def test_initializes_with_headers_and_status_text(self):
-        instance = self.middleware()
+        with override_settings(DEBUG=True):
+            app = wsgi.DjangoAPIStarWSGIApplication()
+            self.assertEqual(2, len(app.apistar_wsgi_app.router._routes))
+            self.assertEqual(2, mocked_include.call_count)
+            self.assertIn(call('/static', static_urls), mocked_include.call_args_list)
+            self.assertIn(call('/docs', docs_urls), mocked_include.call_args_list)
+            app.apistar_wsgi_app.router._routes = []
 
-        self.assertEqual([], instance.response_headers)
-        self.assertEqual('', instance.status_text)
+    def test_is_allowed_django_route_method(self):
+        app = wsgi.DjangoAPIStarWSGIApplication()
+        self.assertIsNone(app.is_allowed_django_route('/fake/'))
 
-    def test_ignores_apistar_if_not_root_path_and_not_404(self):
-        request = FakeRequest()
-        response = HttpResponse()
+        with override_settings(APISTAR_SETTINGS={'ALLOWED_DJANGO_ROUTES': ('/fake/',)}):
+            self.assertEqual('/fake/', app.is_allowed_django_route('/fake/'))
+            self.assertEqual('/fake/lala/', app.is_allowed_django_route('/fake/lala/'))
 
-        instance = self.middleware()
+    @patch('django_apistar.wsgi.StaticFilesHandler')
+    def test_calls_django_static_handler_if_path_startswith_static(self, mocked_handler):
+        app = wsgi.DjangoAPIStarWSGIApplication()
+        app({'PATH_INFO': '/static/lulu'}, None)
+        mocked_handler.assert_called_once_with(app.django_wsgi_app)
+        mocked_handler().assert_called_once_with({'PATH_INFO': '/static/lulu'}, None)
 
-        self.assertEqual(response, instance.process_response(request, response))
+    @override_settings(APISTAR_SETTINGS={'ALLOWED_DJANGO_ROUTES': ('/fake/',)})
+    @patch('django_apistar.wsgi.get_wsgi_application')
+    def test_uses_django_app_if_route_is_allowed(self, mocked_get_app):
+        app = wsgi.DjangoAPIStarWSGIApplication()
+        mocked_get_app.assert_called_once_with()
+        self.assertEqual(mocked_get_app(), app.django_wsgi_app)
 
-    def test_ignores_apistar_if_it_returns_404(self):
-        self.mocked_app().return_value = [b'']
-        request = FakeRequest()
-        response = HttpResponseNotFound()
+        app({'PATH_INFO': '/fake/'}, None)
+        mocked_get_app().assert_called_once_with({'PATH_INFO': '/fake/'}, None)
 
-        instance = self.middleware()
-        instance.status_code = 404
+    @patch('django_apistar.wsgi.WSGIApp')
+    def test_uses_apistar_app_as_default(self, mocked_app):
+        app = wsgi.DjangoAPIStarWSGIApplication()
+        mocked_app.assert_called_once_with(routes=[], settings=test_settings.APISTAR_SETTINGS)
+        self.assertEqual(mocked_app(), app.apistar_wsgi_app)
 
-        self.assertEqual(response, instance.process_response(request, response))
-
-    def test_returns_apistar_response_otherwise(self):
-        request = FakeRequest()
-        response = HttpResponseNotFound()
-
-        instance = self.middleware()
-        instance.response_headers = [['headers']]
-        instance.status_code = 200
-
-        apistar_response = instance.process_response(request, response)
-
-        self.mocked_app.assert_called_with(request.environ, instance.process_apistar_response)
-        self.assertEqual(200, apistar_response.status_code)
-        self.assertEqual(instance.response_headers[0], apistar_response._headers['content-type'])
+        app({'PATH_INFO': '/fake/'}, None)
+        mocked_app().assert_called_once_with({'PATH_INFO': '/fake/'}, None)
