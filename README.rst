@@ -4,9 +4,9 @@ django_apistar
 .. image:: https://travis-ci.org/lucianoratamero/django_apistar.svg?branch=master
     :target: https://travis-ci.org/lucianoratamero/django_apistar
 
-This project is a `Django`_ App that hooks up Django with the `API
-Star`_\ ’s routes and views. The aim is to have API Star as the API
-frontend, while having the whole Django toolset available for devs to
+This project is a `Django`_ App that switches between Django and `API
+Star`_\ ’s routes and views. That way, we have API Star as the API
+frontend, while leaving Django's toolset available for devs to
 work with.
 
 Both API Star’s docs and Django Admin work as intended.
@@ -23,7 +23,7 @@ Installation
     pip install django_apistar
 
 
-After installing, we need to set up a couple of things. First, we need to add ``django_apistar`` to your ``INSTALLED_APPS`` in your project’s ``settings.py``:
+After installing, we need to add ``django_apistar`` to your ``INSTALLED_APPS`` in your project’s ``settings.py``:
 
 .. code:: python
 
@@ -34,16 +34,7 @@ After installing, we need to set up a couple of things. First, we need to add ``
         ...
     )
 
-Then, we need to register our request middleware. **Since we need to modify responses, the lower you can put the middleware, the better.**
-
-.. code:: python
-
-    MIDDLEWARE = [
-        ...,
-        'django_apistar.middleware.RequestMiddleware',
-    ]
-
-Finally, we need two settings set if we want to use ``apistar``: a base route module (``APISTAR_ROUTE_CONF``) and API Star’s own settings. After you’ve defined the databases in your settings file:
+Then, we need two settings set if we want to use ``apistar``: a base route module (``APISTAR_ROUTE_CONF``) and API Star’s own settings. After you’ve defined the databases in your settings file:
 
 .. code:: python
 
@@ -53,11 +44,24 @@ Finally, we need two settings set if we want to use ``apistar``: a base route mo
 
     APISTAR_SETTINGS = {
         'DATABASES': DATABASES,
+        'ALLOWED_DJANGO_ROUTES': ('/admin/', '/static/'),
     }
 
     APISTAR_ROUTE_CONF = 'your_api_star_app.routes'
 
-You may as well disable unused middlewares to speed up the response time.
+The ``ALLOWED_DJANGO_ROUTES`` key describes which routes you want API Star to ignore. Only ``'/static/'`` is required, since we want Django to keep managing static files for us.
+
+Now, if you want to run the dev server, you can use ``python manage.py run`` (not ``runserver`` and hack away!
+
+Changing the default live server
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default, Django uses it's own WSGI server, so running ``python manage.py runserver`` will result in broken API Star routes. If you really want to use Django's ``runserver`` command, you must overwrite the ``WSGI_APPLICATION`` in your ``settings.py`` with our own WSGI application:
+
+.. code:: python
+
+    WSGI_APPLICATION = 'django_apistar.wsgi.application'
+
 
 Authentication
 ~~~~~~~~~~~~~~
@@ -77,9 +81,11 @@ To use it, configure your ``APISTAR_SETTINGS`` as you would configure your API S
 How it works
 ~~~~~~~~~~~~
 
-The way this app works is by faking an API Star WSGIApp while hijacking Django’s own process and using the API Star app whenever Django can’t respond to a request (404).
+This Django app contains a custom WSGI application that smartly changes between API Star's and Django's response handlers. By default, all requests will be responded by API Star, unless the ``ALLOWED_DJANGO_ROUTES`` settings key contains that route.
 
-When responding a request, if Django responded 404, our middleware kicks in and tries to respond it using the API Star routes and views. **Keep in mind that even using this app, Django’s routes take precedence**.
+This way, we are able to bypass Django completely when responding API requests, while keeping Django ready to respond to more complicated requests, like Django Admin and complex template/form views.
+
+Another big advantage is that this app enables both Django Admin **and** API Star automatic API docs.
 
 Implementing views
 ''''''''''''''''''
@@ -91,26 +97,24 @@ For example, let’s create a view that persists a ``Product``:
 .. code:: python
 
     from core import schemas
-    from core.models import Product
+    from core import models
 
-    def create_product(product: schemas.Product):
-        db_product = Product(**product)
+    def create_product(product: schemas.Product) -> schemas.Product:
+        db_product = models.Product(**product)
         db_product.save()
         return http.Response(content=schemas.Product(db_product.__dict__), status=201)
 
-As intended, all the data validation is at the schemas, and everything is handled my API Star.
+As intended, all the data validation is at the schemas, and everything is handled gracefully by API Star.
 
 Implementing tests
 ''''''''''''''''''
 
-To test your API Star views, we can make use of the whole Django test framework. The only main difference is that we can’t use Django’s test client, since it’s tuned to work with Django views. We can, though, use API Star’s own test client:
+To test your API Star views, we provide a hybrid ``TestClient`` that is API Star aware and a custom TestCase, leveraging Django's own ``TestCase`` by including the ``reverse_url`` method from API Star's router:
 
 .. code:: python
 
-    from django.test import TestCase
-    from apistar.test import TestClient
+    from django_apistar.test import TestCase #  our custom TestCase
     from model_mommy import mommy
-    from django_apistar.apps import App
 
     from core import models, schemas
 
@@ -118,14 +122,20 @@ To test your API Star views, we can make use of the whole Django test framework.
     class TestListProducts(TestCase):
 
         def test_list_products(self):
-            client = TestClient(App)
-            url = App.reverse_url('list_products')
-            produto = mommy.make(models.Product, rating=5, size='large')
+            '''
+            The reverse_url method behaves exactly like Django's reverse,
+            but uses the view's defined name as namespace.
+            The builtin client is based on the API Star Test Client,
+            so it's preferred to use this test case only to test API Star's views.
+            '''
 
-            response = client.get(url)
+            url = self.reverse_url('list_products')
+            db_product = mommy.make(models.Product, rating=5, size='large')
+
+            response = self.client.get(url)
             content = response.json()
 
-            expected_product = schemas.Product(product.__dict__)
+            expected_product = schemas.Product(db_product.__dict__)
             self.assertEqual(1, len(content))
             self.assertEqual(expected_product, content[0])
 
@@ -136,3 +146,19 @@ There are still a lot of ways we can improve and add more features to this app. 
 
 .. _Django: https://www.djangoproject.com/
 .. _API Star: https://github.com/encode/apistar
+
+
+Changelog
+~~~~~~~~~~~~
+
+0.3.0
+'''''
+- removes the middleware implementation in favor of a custom WSGI app;
+- removes templates folder and ``apps.py``, since they won't be necessary anymore;
+- adds custom TestClient and TestCase to the ``tests`` module;
+- improves performance by ~100% by bypassing Django when answering API Star's requests.
+
+0.2.3
+'''''
+- coupled API Star to Django via middlewares;
+- hijacks Django's WSGI process to respond using API Star's views.
