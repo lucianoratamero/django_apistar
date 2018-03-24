@@ -51,7 +51,7 @@ Then, we need two settings set if we want to use ``apistar``: a base route modul
 
 The ``ALLOWED_DJANGO_ROUTES`` key describes which routes you want API Star to ignore. Only ``'/static/'`` is required, since we want Django to keep managing static files for us.
 
-Now, if you want to run the dev server, you can use ``python manage.py run`` (not ``runserver`` and hack away!
+Now, if you want to run the dev server, you can use ``python manage.py run`` (not ``runserver``) and hack away!
 
 Changing the default live server
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
