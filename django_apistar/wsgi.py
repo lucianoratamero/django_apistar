@@ -1,13 +1,18 @@
 
+import os
 from importlib import import_module
 
 from apistar import Include
 from apistar.frameworks.wsgi import WSGIApp
 from apistar.handlers import docs_urls, static_urls
 
+import django
 from django.conf import settings
 from django.core.wsgi import get_wsgi_application
 from django.contrib.staticfiles.handlers import StaticFilesHandler
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_apistar_example.settings")
+django.setup()
 
 
 class DjangoAPIStarWSGIApplication:
