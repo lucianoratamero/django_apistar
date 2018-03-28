@@ -2,14 +2,24 @@
 import base64
 import typing
 from apistar import http
+from apistar import Route
 from apistar.interfaces import Auth
 from django.contrib.auth import authenticate
 
+from . import views
+
+
+routes = [
+    Route('/token-login/', 'POST', views.token_login),
+    Route('/token-logout/', 'GET', views.token_logout),
+]
+
 
 class DjangoAuth(Auth):
-    def __init__(self, user=None, *args, **kwargs):
+    def __init__(self, user=None, token=None):
+        super().__init__()
         self.user = user
-        return super().__init__(*args, **kwargs)
+        self.token = token
 
     def is_authenticated(self) -> bool:
         if self.user:
@@ -41,3 +51,26 @@ class DjangoBasicAuthentication():
 
         if user:
             return DjangoAuth(user=user)
+
+
+class DjangoTokenAuthentication():
+    def authenticate(self, authorization: http.Header):
+        """
+        Determine the user associated with a request, using Token Authentication.
+        """
+        from django_apistar.authentication.models import Token
+
+        if authorization is None:
+            return None
+
+        scheme, token = authorization.split()
+        if scheme.lower() != 'bearer':
+            return None
+
+        try:
+            user = Token.objects.get(key=token).user
+        except Token.DoesNotExist:
+            return None
+
+        if user:
+            return DjangoAuth(user=user, token=user.auth_token.key)

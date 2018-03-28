@@ -67,9 +67,9 @@ By default, Django uses it's own WSGI server, so running ``python manage.py runs
 Authentication
 ~~~~~~~~~~~~~~
 
-For now, we only provide a class for Basic authentication.
+We support Basic and Token/Bearer authentication.
 
-To use it, configure your ``APISTAR_SETTINGS`` as you would configure your API Star app:
+To use them, configure your ``APISTAR_SETTINGS`` as you would configure your API Star app:
 
 .. code:: python
 
@@ -78,6 +78,24 @@ To use it, configure your ``APISTAR_SETTINGS`` as you would configure your API S
     ...
 
     APISTAR_SETTINGS['AUTHENTICATION'] = [DjangoBasicAuthentication()],
+
+If you wish to use the token authentication, you need to add the ``django_apistar.authentication`` to your ``INSTALLED_APPS``, then migrate your database.
+
+Token authentication views
+''''''''''''''''''''''''''
+
+We provide two helper views for token authentication. To set them up, add the routes into your root ``routes.py`` file:
+
+.. code:: python
+
+    from django_apistar.authentication import routes
+
+    routes = [
+        ...,
+        Include('/auth', routes),
+    ]
+
+The views will be added to your ``/docs/``, as usual.
 
 How it works
 ~~~~~~~~~~~~
@@ -139,7 +157,7 @@ To test your API Star views, we provide a hybrid ``TestClient`` that is API Star
             expected_product = schemas.Product(db_product.__dict__)
             self.assertEqual(1, len(content))
             self.assertEqual(expected_product, content[0])
-            
+
 Performance
 ~~~~~~~~~~~
 
@@ -147,14 +165,14 @@ Since we capture the request at the WSGI level, you should expect no drops in pe
 
 I've made a few (and completely arbitrary) benchmarks. I've used Siege and set up two views, one Django view, one API Star view, both only responding a json response with ``{"message": "Hello, World!"}``. These were all run in my computer, so don't expect true results - this is only for you to have an idea.
 
-+---------------------+-----------+-----------+-----------+-----------+----------------+ 
-|                     | apistar   | django2   | django2-no middlewares| django_apistar | 
++---------------------+-----------+-----------+-----------+-----------+----------------+
+|                     | apistar   | django2   | django2-no middlewares| django_apistar |
 +=====================+===========+===========+=======================+================+
 | transactions        | 13688     | 6840      | 10507                 |  13899         |
 +---------------------+-----------+-----------+-----------------------+----------------+
 | transactions/sec    | 1482.99   | 716.23    | 1085.43               |1440.31         |
 +---------------------+-----------+-----------+-----------------------+----------------+
-| longest transaction | 0.08 sec  | 3.06      | 3.24                  |    0.08        | 
+| longest transaction | 0.08 sec  | 3.06      | 3.24                  |    0.08        |
 +---------------------+-----------+-----------+-----------------------+----------------+
 
 Contributing
@@ -168,6 +186,11 @@ There are still a lot of ways we can improve and add more features to this app. 
 
 Changelog
 ~~~~~~~~~~~~
+
+0.3.2
+'''''
+- adds authentication app;
+- adds views, models, schemas and authenticators for token authentication.
 
 0.3.1
 '''''

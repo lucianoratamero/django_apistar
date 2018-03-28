@@ -1,70 +1,21 @@
 
 from unittest.mock import patch, call
 
-from apistar import http
 from apistar.test import _TestClient
-from apistar.interfaces import Auth
 from apistar.handlers import docs_urls, static_urls
 from django.test import TestCase
 from django.test.utils import override_settings
 from django.core.management.base import BaseCommand
-from django.contrib.auth.models import User
 
 import tests
 from tests import test_settings
-from django_apistar import auth, test, wsgi
+from django_apistar import test, wsgi
 from django_apistar.management.commands.run import Command
 
 
 class FakeRequest:
     def __init__(self, path='/fake/'):
         self.environ = {'PATH_INFO': path}
-
-
-class TestDjangoAuth(TestCase):
-
-    def test_django_auth_is_apistar_auth_subclass(self):
-        assert issubclass(auth.DjangoAuth, Auth)
-
-    def test_django_auth_integrates_with_default_user_model(self):
-        user = User(username='test', id=123)
-        auth_user = auth.DjangoAuth(user=user)
-
-        self.assertEqual(user.is_authenticated, auth_user.is_authenticated())
-        self.assertEqual(user.id, auth_user.get_user_id())
-        self.assertEqual(user.username, auth_user.get_display_name())
-        self.assertEqual(user, auth_user.user)
-
-
-class TestDjangoBasicAuthentication(TestCase):
-
-    def setUp(self):
-        self.authenticator = auth.DjangoBasicAuthentication()
-
-    def test_returns_none_if_no_headers_are_passed(self):
-        self.assertIsNone(self.authenticator.authenticate(None))
-
-    def test_returns_none_if_scheme_is_not_basic(self):
-        auth_header = http.Header('not_basic token')
-        self.assertIsNone(self.authenticator.authenticate(auth_header))
-
-    @patch('django_apistar.auth.authenticate')
-    def test_returns_none_if_django_does_not_authenticate_user(self, mocked_authenticate):
-        mocked_authenticate.return_value = None
-        auth_header = http.Header('Basic dXNlcm5hbWU6cGFzc3dvcmQ=')
-
-        self.assertIsNone(self.authenticator.authenticate(auth_header))
-        mocked_authenticate.assert_called_once_with(username='username', password='password')
-
-    @patch('django_apistar.auth.authenticate')
-    def test_returns_django_auth_instance_if_django_authenticates_user(self, mocked_authenticate):
-        mocked_authenticate.return_value = User()
-        auth_header = http.Header('Basic dXNlcm5hbWU6cGFzc3dvcmQ=')
-
-        auth_user = self.authenticator.authenticate(auth_header)
-
-        assert isinstance(auth_user, auth.DjangoAuth)
-        mocked_authenticate.assert_called_once_with(username='username', password='password')
 
 
 class TestTestClient(TestCase):
