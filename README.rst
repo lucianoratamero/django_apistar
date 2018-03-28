@@ -15,6 +15,7 @@ Suppports:
 
 - django>=1.8
 - apistar>=0.3.5
+- python>=3.6
 
 Installation
 ~~~~~~~~~~~~
@@ -138,6 +139,23 @@ To test your API Star views, we provide a hybrid ``TestClient`` that is API Star
             expected_product = schemas.Product(db_product.__dict__)
             self.assertEqual(1, len(content))
             self.assertEqual(expected_product, content[0])
+            
+Performance
+~~~~~~~~~~~
+
+Since we capture the request at the WSGI level, you should expect no drops in performance whatsoever.
+
+I've made a few (and completely arbitrary) benchmarks. I've used Siege and set up two views, one Django view, one API Star view, both only responding a json response with ``{"message": "Hello, World!"}``. These were all run in my computer, so don't expect true results - this is only for you to have an idea.
+
++---------------------+-----------+-----------+-----------+-----------+----------------+ 
+|                     | apistar   | django2   | django2-no middlewares| django_apistar | 
++=====================+===========+===========+=======================+================+
+| transactions        | 13688     | 6840      | 10507                 |  13899         |
++---------------------+-----------+-----------+-----------------------+----------------+
+| transactions/sec    | 1482.99   | 716.23    | 1085.43               |1440.31         |
++---------------------+-----------+-----------+-----------------------+----------------+
+| longest transaction | 0.08 sec  | 3.06      | 3.24                  |    0.08        | 
++---------------------+-----------+-----------+-----------------------+----------------+
 
 Contributing
 ~~~~~~~~~~~~
@@ -150,6 +168,11 @@ There are still a lot of ways we can improve and add more features to this app. 
 
 Changelog
 ~~~~~~~~~~~~
+
+0.3.1
+'''''
+- fixes default ``DJANGO_SETTINGS_MODULE``;
+- sets up Django before starting the WSGI application, enabling use with Heroku.
 
 0.3.0
 '''''
