@@ -44,7 +44,6 @@ Then, we need two settings set if we want to use ``apistar``: a base route modul
     }
 
     APISTAR_SETTINGS = {
-        'DATABASES': DATABASES,
         'ALLOWED_DJANGO_ROUTES': ('/admin/', '/static/'),
     }
 
@@ -73,13 +72,23 @@ To use them, configure your ``APISTAR_SETTINGS`` as you would configure your API
 
 .. code:: python
 
-    from django_apistar.auth import DjangoBasicAuthentication
+    from django_apistar.authentication import DjangoBasicAuthentication, DjangoTokenAuthentication
 
     ...
 
-    APISTAR_SETTINGS['AUTHENTICATION'] = [DjangoBasicAuthentication()],
+    APISTAR_SETTINGS['AUTHENTICATION'] = [DjangoBasicAuthentication(), DjangoTokenAuthentication()],
 
 If you wish to use the token authentication, you need to add the ``django_apistar.authentication`` to your ``INSTALLED_APPS``, then migrate your database.
+
+.. code:: python
+
+    INSTALLED_APPS = (
+        ...
+        'django_apistar',
+        'django_apistar.authentication',
+        'your_api_star_app',
+        ...
+    )
 
 Token authentication views
 ''''''''''''''''''''''''''
