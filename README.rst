@@ -10,6 +10,10 @@ frontend, while leaving Django's toolset available for devs to
 work with.
 
 Both API Star’s docs and Django Admin work as intended.
+You can see a Django + API Star implementation example at the django_apistar_example_ or test it on heroku_.
+
+.. _django_apistar_example: https://github.com/lucianoratamero/django_apistar_example
+.. _heroku: https://django-apistar-example.herokuapp.com/docs/
 
 Suppports:
 
