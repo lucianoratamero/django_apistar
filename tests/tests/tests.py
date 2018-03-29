@@ -88,6 +88,14 @@ class TestWSGIApp(TestCase):
         mocked_handler.assert_called_once_with(app.django_wsgi_app)
         mocked_handler().assert_called_once_with({'PATH_INFO': '/static/lulu'}, None)
 
+    @override_settings(STATIC_URL='/other_static/')
+    @patch('django_apistar.wsgi.StaticFilesHandler')
+    def test_calls_django_static_handler_if_path_startswith_different_static_url(self, mocked_handler):
+        app = wsgi.DjangoAPIStarWSGIApplication()
+        app({'PATH_INFO': '/other_static/lulu'}, None)
+        mocked_handler.assert_called_once_with(app.django_wsgi_app)
+        mocked_handler().assert_called_once_with({'PATH_INFO': '/other_static/lulu'}, None)
+
     @override_settings(APISTAR_SETTINGS={'ALLOWED_DJANGO_ROUTES': ('/fake/',)})
     @patch('django_apistar.wsgi.get_wsgi_application')
     def test_uses_django_app_if_route_is_allowed(self, mocked_get_app):
