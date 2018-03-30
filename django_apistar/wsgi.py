@@ -36,7 +36,12 @@ class DjangoAPIStarWSGIApplication:
     def __call__(self, environ, start_response):
         path = environ['PATH_INFO']
 
-        if path.startswith('/static/'):
+        if settings.STATIC_URL is not None:
+            static_url = settings.STATIC_URL
+        else:
+            static_url = '/static/'
+
+        if path.startswith(static_url):
             return StaticFilesHandler(self.django_wsgi_app)(environ, start_response)
 
         if self.is_allowed_django_route(path):
