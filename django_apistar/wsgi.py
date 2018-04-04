@@ -24,7 +24,11 @@ class DjangoAPIStarWSGIApplication:
             routes.append(Include('/docs', docs_urls))
 
         self.django_wsgi_app = get_wsgi_application()
-        self.apistar_wsgi_app = WSGIApp(routes=routes, settings=settings.APISTAR_SETTINGS)
+        self.apistar_wsgi_app = WSGIApp(
+            routes=routes,
+            settings=settings.APISTAR_SETTINGS,
+            components=settings.APISTAR_SETTINGS.get('COMPONENTS', []),
+        )
 
     def is_allowed_django_route(self, path):
         allowed_django_routes = settings.APISTAR_SETTINGS.get('ALLOWED_DJANGO_ROUTES', [])

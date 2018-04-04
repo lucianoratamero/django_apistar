@@ -1,6 +1,7 @@
 
 from unittest.mock import patch, call
 
+from apistar.core import Component
 from apistar.test import _TestClient
 from apistar.handlers import docs_urls, static_urls
 from django.test import TestCase
@@ -59,6 +60,16 @@ class TestWSGIApp(TestCase):
     def setUp(self):
         tests.routes = []
 
+    @patch('django_apistar.wsgi.WSGIApp')
+    @override_settings(APISTAR_SETTINGS={'COMPONENTS': ['fake_component']})
+    def test_passes_on_apistar_settings_to_app(self, mocked_app):
+        wsgi.DjangoAPIStarWSGIApplication()
+        mocked_app.assert_called_once_with(
+            components=['fake_component'],
+            routes=[],
+            settings={'COMPONENTS': ['fake_component']}
+        )
+
     @patch('django_apistar.wsgi.Include')
     def test_initializes_static_and_docs_if_debug_true(self, mocked_include):
         app = wsgi.DjangoAPIStarWSGIApplication()
@@ -109,7 +120,7 @@ class TestWSGIApp(TestCase):
     @patch('django_apistar.wsgi.WSGIApp')
     def test_uses_apistar_app_as_default(self, mocked_app):
         app = wsgi.DjangoAPIStarWSGIApplication()
-        mocked_app.assert_called_once_with(routes=[], settings=test_settings.APISTAR_SETTINGS)
+        mocked_app.assert_called_once_with(components=[], routes=[], settings=test_settings.APISTAR_SETTINGS)
         self.assertEqual(mocked_app(), app.apistar_wsgi_app)
 
         app({'PATH_INFO': '/fake/'}, None)
