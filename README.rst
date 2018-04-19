@@ -18,8 +18,10 @@ You can see a Django + API Star implementation example at the django_apistar_exa
 Suppports:
 
 - django>=1.8
-- apistar>=0.3.5
+- apistar>=0.3.5,<=0.3.9
 - python>=3.6
+
+We will **not** update this lib until API Star's new versions support docs and easy custom validations again, so we're locked in the 0.3.9 version (which is beautiful enough, btw).
 
 Installation
 ~~~~~~~~~~~~
@@ -199,6 +201,11 @@ There are still a lot of ways we can improve and add more features to this app. 
 
 Changelog
 ~~~~~~~~~~~~
+
+0.3.9__0
+''''''''
+- starts using matching versions with API Star to simplify things (0.3.9__x will always work and depend on apistar==0.3.9);
+- locks maximum API Star version to 0.3.9.
 
 0.3.2
 '''''
