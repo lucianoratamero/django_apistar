@@ -9,7 +9,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='django_apistar',
-    version='0.3.2',
+    version='0.3.9__0',
     description='Django app for using API Star as frontend.',
     long_description=long_description,
     long_description_content_type='text/x-rst',
