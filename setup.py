@@ -30,5 +30,5 @@ setup(
     keywords='apistar api rest django',
     packages=find_packages(exclude=['tests']),
     install_requires=['django>=1.8', 'apistar>=0.4.0'],
-    python_requires='==3.6',
+    python_requires='>=3.6,<3.7',
 )
