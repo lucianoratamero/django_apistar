@@ -10,7 +10,7 @@ def token_login(user: schemas.TokenUser):
     from django_apistar.authentication.models import Token
 
     if not user:
-        return http.Response({"message": "Invalid credentials."}, status=400)
+        return http.JSONResponse({"message": "Invalid credentials."}, status_code=400)
 
     user = authenticate(username=user['username'], password=user['password'])
 
@@ -23,7 +23,7 @@ def token_login(user: schemas.TokenUser):
             return user.auth_token.key
 
     else:
-        return http.Response({"message": "Invalid credentials."}, status=400)
+        return http.JSONResponse({"message": "Invalid credentials."}, status_code=400)
 
 
 def token_logout(authorization: http.Header):
@@ -43,4 +43,4 @@ def token_logout(authorization: http.Header):
     if user:
         user.auth_token.delete()
 
-    return http.Response({"message": "Logged out."}, status=200)
+    return http.JSONResponse({"message": "Logged out."}, status_code=200)
