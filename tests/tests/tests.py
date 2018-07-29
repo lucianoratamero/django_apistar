@@ -1,9 +1,8 @@
 
 from unittest.mock import patch, call
 
-from apistar.core import Component
+from apistar.server.components import Component
 from apistar.test import _TestClient
-from apistar.handlers import docs_urls, static_urls
 from django.test import TestCase
 from django.test.utils import override_settings
 from django.core.management.base import BaseCommand
@@ -11,7 +10,6 @@ from django.core.management.base import BaseCommand
 import tests
 from tests import test_settings
 from django_apistar import test, wsgi
-from django_apistar.management.commands.run import Command
 
 
 class FakeRequest:
@@ -44,45 +42,36 @@ class TestTestCase(TestCase):
         self.assertEqual(mocked_app.apistar_wsgi_app.reverse_url, test_case.reverse_url)
 
 
-class TestRunCommand(TestCase):
-
-    @patch('django_apistar.management.commands.run.application')
-    @patch('django_apistar.management.commands.run.run_wsgi')
-    def test_command_runs_correct_application(self, mocked_run_wsgi, mocked_app):
-        assert issubclass(Command, BaseCommand)
-        command = Command()
-        command.handle()
-        mocked_run_wsgi.assert_called_once_with(mocked_app)
-
-
 class TestWSGIApp(TestCase):
 
     def setUp(self):
         tests.routes = []
 
     @patch('django_apistar.wsgi.WSGIApp')
-    @override_settings(APISTAR_SETTINGS={'COMPONENTS': ['fake_component']})
+    @override_settings(APISTAR_SETTINGS={
+        'COMPONENTS': ['fake_component'],
+        'EVENT_HOOKS': ['fake_hooks'],
+    })
     def test_passes_on_apistar_settings_to_app(self, mocked_app):
         wsgi.DjangoAPIStarWSGIApplication()
         mocked_app.assert_called_once_with(
             components=['fake_component'],
-            routes=[],
-            settings={'COMPONENTS': ['fake_component']}
+            event_hooks=['fake_hooks'],
+            docs_url=None, routes=[]
         )
 
     @patch('django_apistar.wsgi.Include')
     def test_initializes_static_and_docs_if_debug_true(self, mocked_include):
         app = wsgi.DjangoAPIStarWSGIApplication()
-        self.assertEqual(0, len(app.apistar_wsgi_app.router._routes))
-        self.assertEqual(0, mocked_include.call_count)
+        self.assertEqual(1, len(app.apistar_wsgi_app.router.name_lookups))
+        assert 'serve_documentation' not in app.apistar_wsgi_app.router.name_lookups
+        assert 'static' not in app.apistar_wsgi_app.router.name_lookups
 
         with override_settings(DEBUG=True):
             app = wsgi.DjangoAPIStarWSGIApplication()
-            self.assertEqual(2, len(app.apistar_wsgi_app.router._routes))
-            self.assertEqual(2, mocked_include.call_count)
-            self.assertIn(call('/static', static_urls), mocked_include.call_args_list)
-            self.assertIn(call('/docs', docs_urls), mocked_include.call_args_list)
-            app.apistar_wsgi_app.router._routes = []
+            self.assertEqual(3, len(app.apistar_wsgi_app.router.name_lookups))
+            assert 'serve_documentation' in app.apistar_wsgi_app.router.name_lookups
+            assert 'static' in app.apistar_wsgi_app.router.name_lookups
 
     def test_is_allowed_django_route_method(self):
         app = wsgi.DjangoAPIStarWSGIApplication()
@@ -120,7 +109,9 @@ class TestWSGIApp(TestCase):
     @patch('django_apistar.wsgi.WSGIApp')
     def test_uses_apistar_app_as_default(self, mocked_app):
         app = wsgi.DjangoAPIStarWSGIApplication()
-        mocked_app.assert_called_once_with(components=[], routes=[], settings=test_settings.APISTAR_SETTINGS)
+        mocked_app.assert_called_once_with(
+            components=[], docs_url=None, event_hooks=[], routes=[]
+        )
         self.assertEqual(mocked_app(), app.apistar_wsgi_app)
 
         app({'PATH_INFO': '/fake/'}, None)
