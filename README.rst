@@ -18,10 +18,8 @@ You can see a Django + API Star implementation example at the django_apistar_exa
 Suppports:
 
 - django>=1.8
-- apistar>=0.3.5,<=0.3.9
-- python>=3.6
-
-We will **not** update this lib until API Star's new versions support docs and easy custom validations again, so we're locked in the 0.3.9 version (which is beautiful enough, btw).
+- apistar>=0.5.40
+- python==3.6
 
 Installation
 ~~~~~~~~~~~~
@@ -41,13 +39,11 @@ After installing, we need to add ``django_apistar`` to your ``INSTALLED_APPS`` i
         ...
     )
 
-Then, we need two settings set if we want to use ``apistar``: a base route module (``APISTAR_ROUTE_CONF``) and API Star’s own settings. After you’ve defined the databases in your settings file:
+
+Then, we need to set up three settings: a base API Star route module (``APISTAR_ROUTE_CONF``), API Star’s own settings and to change the default WSGI application:
+
 
 .. code:: python
-
-    DATABASES = {
-        ...
-    }
 
     APISTAR_SETTINGS = {
         'ALLOWED_DJANGO_ROUTES': ('/admin/', '/static/'),
@@ -55,18 +51,13 @@ Then, we need two settings set if we want to use ``apistar``: a base route modul
 
     APISTAR_ROUTE_CONF = 'your_api_star_app.routes'
 
+    # remember that the following setting already exists in a default django settings file!
+    WSGI_APPLICATION = 'django_apistar.wsgi.application'
+
+
 The ``ALLOWED_DJANGO_ROUTES`` key describes which routes you want API Star to ignore. Only ``'/static/'`` is required, since we want Django to keep managing static files for us.
 
-Now, if you want to run the dev server, you can use ``python manage.py run`` (not ``runserver``) and hack away!
-
-Changing the default live server
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-By default, Django uses it's own WSGI server, so running ``python manage.py runserver`` will result in broken API Star routes. If you really want to use Django's ``runserver`` command, you must overwrite the ``WSGI_APPLICATION`` in your ``settings.py`` with our own WSGI application:
-
-.. code:: python
-
-    WSGI_APPLICATION = 'django_apistar.wsgi.application'
+Now, if you want to run the dev server, run ``python manage.py runserver`` and hack away!
 
 
 Authentication
@@ -78,13 +69,13 @@ To use them, configure your ``APISTAR_SETTINGS`` as you would configure your API
 
 .. code:: python
 
-    from django_apistar.authentication import DjangoBasicAuthentication, DjangoTokenAuthentication
+    from django_apistar.authentication.components import DjangoBasicAuthentication, DjangoTokenAuthentication
 
     ...
 
-    APISTAR_SETTINGS['AUTHENTICATION'] = [DjangoBasicAuthentication(), DjangoTokenAuthentication()],
+    APISTAR_SETTINGS['COMPONENTS'] = [DjangoBasicAuthentication(), DjangoTokenAuthentication()],
 
-If you wish to use the token authentication, you need to add the ``django_apistar.authentication`` to your ``INSTALLED_APPS``, then migrate your database.
+If you want to use authentication by token, you need to add the ``django_apistar.authentication`` to your ``INSTALLED_APPS``, then migrate your database.
 
 .. code:: python
 
@@ -136,7 +127,7 @@ For example, let’s create a view that persists a ``Product``:
     def create_product(product: schemas.Product) -> schemas.Product:
         db_product = models.Product(**product)
         db_product.save()
-        return http.Response(content=schemas.Product(db_product.__dict__), status=201)
+        return http.JSONResponse(schemas.Product(db_product.__dict__), status_code=201)
 
 As intended, all the data validation is at the schemas, and everything is handled gracefully by API Star.
 
@@ -201,6 +192,12 @@ There are still a lot of ways we can improve and add more features to this app. 
 
 Changelog
 ~~~~~~~~~~~~
+
+0.5.40__0
+'''''''''
+- updates API Star version and code references;
+- refactor classes into components;
+- adds sample event hook for authentication.
 
 0.3.9__0
 ''''''''

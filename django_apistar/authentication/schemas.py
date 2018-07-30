@@ -1,10 +1,7 @@
 
-from apistar import typesystem
+from apistar import types, validators
 
 
-class TokenUser(typesystem.Object):
-    required = ['username', 'password']
-    properties = {
-        'username': typesystem.String,
-        'password': typesystem.String,
-    }
+class TokenUser(types.Type):
+    username = validators.String()
+    password = validators.String()

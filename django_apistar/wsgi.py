@@ -2,9 +2,8 @@
 import os
 from importlib import import_module
 
-from apistar import Include
-from apistar.frameworks.wsgi import WSGIApp
-from apistar.handlers import docs_urls, static_urls
+from apistar.server.app import App as WSGIApp
+from apistar.server.core import Include
 
 import django
 from django.conf import settings
@@ -15,19 +14,34 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_apistar_example.settings
 django.setup()
 
 
+class DebugApp(WSGIApp):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.debug = True
+
+
 class DjangoAPIStarWSGIApplication:
     def __init__(self):
+        self.django_wsgi_app = get_wsgi_application()
+        self.apistar_wsgi_app = self.get_apistar_wsgi_application()
+
+    def get_apistar_wsgi_application(self):
         routes = import_module(settings.APISTAR_ROUTE_CONF).routes
+        docs_url = '/docs/'
+
+        if not settings.DEBUG:
+            docs_url = None
+
+        apistar_wsgi_app_class = WSGIApp
 
         if settings.DEBUG:
-            routes.append(Include('/static', static_urls))
-            routes.append(Include('/docs', docs_urls))
+            apistar_wsgi_app_class = DebugApp
 
-        self.django_wsgi_app = get_wsgi_application()
-        self.apistar_wsgi_app = WSGIApp(
+        return apistar_wsgi_app_class(
             routes=routes,
-            settings=settings.APISTAR_SETTINGS,
+            docs_url=docs_url,
             components=settings.APISTAR_SETTINGS.get('COMPONENTS', []),
+            event_hooks=settings.APISTAR_SETTINGS.get('EVENT_HOOKS', []),
         )
 
     def is_allowed_django_route(self, path):
