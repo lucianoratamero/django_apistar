@@ -19,7 +19,7 @@ Suppports:
 
 - django>=1.8
 - apistar>=0.5.40
-- python==3.6
+- python>=3.6,<3.7
 
 Installation
 ~~~~~~~~~~~~
