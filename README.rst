@@ -1,6 +1,10 @@
 django_apistar
 ==============
 
+**Note: since API Star is changing directions (https://github.com/encode/apistar/pull/624), this project is mostly on hold.
+As soon as everything's figured out, this project may change heavily as well.
+While we wait, I'll be only dealing with possible bugs. Thanks for understanding :]**
+
 .. image:: https://travis-ci.org/lucianoratamero/django_apistar.svg?branch=master
     :target: https://travis-ci.org/lucianoratamero/django_apistar
 
